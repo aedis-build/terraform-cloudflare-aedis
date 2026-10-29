@@ -1,7 +1,7 @@
 # rlfn.studio: Next SSR (OpenNext) with the proposals form at /api/proposals, Turnstile on the form and the Worker's
 # send_email binding delivering proposals to a verified Email Routing address. Free plan.
 terraform {
-  required_version = ">= 1.6"
+  required_version = ">= 1.7"
 
   required_providers {
     cloudflare = {

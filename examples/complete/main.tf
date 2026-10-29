@@ -1,7 +1,7 @@
 # Reference of every module variable, in a fictitious zone (example.com) on the Pro plan with several workloads. Each
 # block says what changes on Free. Nothing here belongs to a real zone: change names, hostnames and addresses first.
 terraform {
-  required_version = ">= 1.6"
+  required_version = ">= 1.7"
 
   required_providers {
     cloudflare = {
