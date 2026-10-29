@@ -111,8 +111,8 @@ run "free_varios_workloads_com_forms_numa_regra_so" {
     error_message = "3 POSTs por 10 s, bloqueio de 10 s no Free"
   }
   assert {
-    condition     = cloudflare_email_routing_dns.this[0].name == null
-    error_message = "o Email Routing do apex vai sem name: a API só aceita subdomínio ali"
+    condition     = cloudflare_email_routing_settings.this[0].support_subaddress == false
+    error_message = "support_subaddress igual ao que o provider lê, sem update perpétuo"
   }
   assert {
     condition     = cloudflare_ruleset.custom[0].rules[0].expression == "(http.host in {\"app.example.com\" \"example.com\" \"www.example.com\"} and not http.request.method in {\"GET\" \"HEAD\" \"POST\"}) or (http.host in {\"api.example.com\"} and not http.request.method in {\"GET\" \"HEAD\" \"POST\" \"PUT\" \"PATCH\" \"DELETE\" \"OPTIONS\"})"

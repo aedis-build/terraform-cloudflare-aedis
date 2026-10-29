@@ -262,17 +262,12 @@ resource "cloudflare_turnstile_widget" "this" {
   mode       = "managed"
 }
 
+# Creating it enables Email Routing and adds and locks the MX, SPF and DKIM records of the apex. support_subaddress
+# matches what the provider (5.28) reads back: left null, every plan shows an update its no-op Update cannot apply.
 resource "cloudflare_email_routing_settings" "this" {
-  count   = var.email_routing == null ? 0 : 1
-  zone_id = local.zone_id
-}
-
-# Without name it adds and locks the MX, SPF and DKIM records of the apex; the API takes name only for a subdomain.
-resource "cloudflare_email_routing_dns" "this" {
-  count   = var.email_routing == null ? 0 : 1
-  zone_id = local.zone_id
-
-  depends_on = [cloudflare_email_routing_settings.this]
+  count              = var.email_routing == null ? 0 : 1
+  zone_id            = local.zone_id
+  support_subaddress = false
 }
 
 # The addresses key the resources, and for_each refuses sensitive keys: a caller that reads the destination from a
