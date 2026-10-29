@@ -1,0 +1,8 @@
+# Owners by path. The module itself (what every caller applies to a zone), its tests, CI, this file and the security
+# policy require review from platform security.
+*                               @aedis-build/maintainers
+/*.tf                           @aedis-build/platform-security
+/tests/                         @aedis-build/platform-security
+/.github/                       @aedis-build/platform-security
+/CODEOWNERS                     @aedis-build/platform-security
+/SECURITY.md                    @aedis-build/platform-security

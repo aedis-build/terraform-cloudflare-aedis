@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "build(deps)"
+  # The provider pin of the examples (and their lock files); the module itself declares a range for its callers.
+  - package-ecosystem: terraform
+    directories: ["/", "/examples/*"]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      terraform:
+        patterns: ["*"]
+    commit-message:
+      prefix: "build(deps)"

@@ -1,0 +1,6 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+# Module root: the lock file belongs to the caller; the examples keep theirs.
+/.terraform.lock.hcl
