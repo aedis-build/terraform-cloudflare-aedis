@@ -132,6 +132,26 @@ run "free_varios_workloads_com_forms_numa_regra_so" {
   }
 }
 
+run "email_routing_com_destino_sensivel" {
+  command = plan
+
+  variables {
+    zone_name = "example.com"
+    workloads = {
+      site = { type = "site-ssr", hostnames = ["example.com"], forms = ["/api/propostas"] }
+    }
+    email_routing = {
+      addresses = [sensitive("propostas@example.com")]
+      rules     = [{ to = sensitive("contato@example.com"), forward = [sensitive("propostas@example.com")] }]
+    }
+  }
+
+  assert {
+    condition     = length(cloudflare_email_routing_address.this) == 1 && length(cloudflare_email_routing_rule.this) == 1
+    error_message = "um destino lido de variável sensível vira chave do for_each sem falhar o plan"
+  }
+}
+
 run "pro" {
   command = plan
 

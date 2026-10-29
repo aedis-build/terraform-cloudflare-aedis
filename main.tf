@@ -267,14 +267,17 @@ resource "cloudflare_email_routing_dns" "this" {
   depends_on = [cloudflare_email_routing_settings.this]
 }
 
+# The addresses key the resources, and for_each refuses sensitive keys: a caller that reads the destination from a
+# sensitive variable would fail the plan. An address is not a secret (it shows in the dashboard and in the address of
+# the resource), so the mark is dropped here instead of in every caller.
 resource "cloudflare_email_routing_address" "this" {
-  for_each   = toset(try(var.email_routing.addresses, []))
+  for_each   = toset([for a in try(var.email_routing.addresses, []) : nonsensitive(a)])
   account_id = local.account_id
   email      = each.value
 }
 
 resource "cloudflare_email_routing_rule" "this" {
-  for_each = { for r in try(var.email_routing.rules, []) : r.to => r }
+  for_each = { for r in try(var.email_routing.rules, []) : nonsensitive(r.to) => r }
   zone_id  = local.zone_id
   name     = each.key
   matchers = [{ type = "literal", field = "to", value = each.key }]
