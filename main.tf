@@ -93,16 +93,17 @@ locals {
 
   ai_policy = { allow = "disabled", block = "block", only_on_ad_pages = "only_on_ad_pages" }
 
-  # Rate limiting: with a challenge, the API of Free, Pro and Business requires mitigation_timeout 0 (passing the
-  # challenge resets the counter); with Block, the action lasts one period.
-  challenge      = var.rate_limit_action == "managed_challenge"
-  form_workloads = { for k, w in var.workloads : k => w if length(w.forms) > 0 }
+  # Rate limiting: Free only accepts Block. With a challenge, the API of Pro and Business requires mitigation_timeout 0
+  # (passing the challenge resets the counter); with Block, the action lasts one period.
+  rate_limit_action = coalesce(var.rate_limit_action, local.pro ? "managed_challenge" : "block")
+  challenge         = local.rate_limit_action == "managed_challenge"
+  form_workloads    = { for k, w in var.workloads : k => w if length(w.forms) > 0 }
   # The forms of every workload in a single rule: on free it is the zone's only rate limiting rule.
   form_rate_limit = {
     ref         = "aedis_form_rate_limit"
     description = "POST to the forms of the workloads"
     expression  = "http.request.method eq \"POST\" and (${join(" or ", [for k, w in local.form_workloads : "(${local.hosts[k]} and http.request.uri.path in {${join(" ", [for p in w.forms : jsonencode(p)])}})"])})"
-    action      = var.rate_limit_action
+    action      = local.rate_limit_action
     ratelimit = {
       characteristics     = ["cf.colo.id", "ip.src"]
       period              = local.pro ? 60 : 10
@@ -117,7 +118,7 @@ locals {
     ref         = "aedis_site_rate_limit"
     description = "Requests per IP on the hostnames of sites and APIs"
     expression  = "http.host in {${join(" ", [for h in local.site_hosts : jsonencode(h)])}} and not cf.client.bot"
-    action      = var.rate_limit_action
+    action      = local.rate_limit_action
     ratelimit = {
       characteristics     = ["cf.colo.id", "ip.src"]
       period              = 10
@@ -218,6 +219,13 @@ resource "cloudflare_ruleset" "rate_limit" {
   name        = "aedis: rate limit"
   description = "Managed by the aedis-build/aedis/cloudflare Terraform module"
   rules       = local.rate_limit_rules
+
+  lifecycle {
+    precondition {
+      condition     = local.pro || !local.challenge
+      error_message = "The free plan only accepts block in rate limiting rules: leave rate_limit_action unset or set it to block."
+    }
+  }
 }
 
 # On free the Free Managed Ruleset already runs by itself and is not configurable; pro runs Cloudflare Managed and OWASP.
@@ -259,10 +267,10 @@ resource "cloudflare_email_routing_settings" "this" {
   zone_id = local.zone_id
 }
 
+# Without name it adds and locks the MX, SPF and DKIM records of the apex; the API takes name only for a subdomain.
 resource "cloudflare_email_routing_dns" "this" {
   count   = var.email_routing == null ? 0 : 1
   zone_id = local.zone_id
-  name    = var.zone_name
 
   depends_on = [cloudflare_email_routing_settings.this]
 }

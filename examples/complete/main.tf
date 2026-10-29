@@ -75,8 +75,8 @@ module "zone" {
   # when no workload has forms.
   site_requests_per_period = 100
 
-  # managed_challenge requires mitigation_timeout 0 on Free, Pro and Business (the module does that). With block, the
-  # action lasts one period: 10 s on Free, 60 s for the forms on Pro.
+  # Pro: managed_challenge (the default) requires mitigation_timeout 0 (the module does that). With block, the action
+  # lasts one period: 60 s for the forms. Free only accepts block.
   rate_limit_action = "managed_challenge"
 
   # Free: turns on Bot Fight Mode, which takes no exceptions (monitors may get challenged) and injects a script that a
