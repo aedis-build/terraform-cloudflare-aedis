@@ -32,12 +32,12 @@ variable "site_requests_per_period" {
 }
 
 variable "rate_limit_action" {
-  description = "Rate limiting action: managed_challenge (default; people pass the challenge) or block."
+  description = "Rate limiting action: managed_challenge (people pass the challenge) or block. Unset, it is managed_challenge on pro and block on free, the only action Free accepts in rate limiting."
   type        = string
-  default     = "managed_challenge"
+  default     = null
 
   validation {
-    condition     = contains(["managed_challenge", "block"], var.rate_limit_action)
+    condition     = contains(["managed_challenge", "block"], coalesce(var.rate_limit_action, "block"))
     error_message = "rate_limit_action must be managed_challenge or block."
   }
 }

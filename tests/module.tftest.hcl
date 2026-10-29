@@ -34,8 +34,8 @@ run "free_dois_sites_estaticos_e_cdn" {
     error_message = "sem forms, a única regra do Free é o limite geral nos sites, sem a cdn (o camo do GitHub) e sem bots verificados"
   }
   assert {
-    condition     = cloudflare_ruleset.rate_limit[0].rules[0].action == "managed_challenge" && cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.mitigation_timeout == 0 && cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.period == 10 && cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.requests_per_period == 100
-    error_message = "o limite geral desafia (mitigation_timeout 0), 100 por 10 s"
+    condition     = cloudflare_ruleset.rate_limit[0].rules[0].action == "block" && cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.mitigation_timeout == 10 && cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.period == 10 && cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.requests_per_period == 100
+    error_message = "no Free o limite geral bloqueia (a única ação que o plano aceita) por 10 s, 100 por 10 s"
   }
   assert {
     condition     = length(cloudflare_ruleset.managed) == 0 && length(cloudflare_turnstile_widget.this) == 0 && length(cloudflare_email_routing_settings.this) == 0
@@ -107,8 +107,12 @@ run "free_varios_workloads_com_forms_numa_regra_so" {
     error_message = "cada workload entra com os próprios hosts e rotas"
   }
   assert {
-    condition     = cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.period == 10 && cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.requests_per_period == 3 && cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.mitigation_timeout == 0
-    error_message = "3 POSTs por 10 s com desafio"
+    condition     = cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.period == 10 && cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.requests_per_period == 3 && cloudflare_ruleset.rate_limit[0].rules[0].action == "block" && cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.mitigation_timeout == 10
+    error_message = "3 POSTs por 10 s, bloqueio de 10 s no Free"
+  }
+  assert {
+    condition     = cloudflare_email_routing_dns.this[0].name == null
+    error_message = "o Email Routing do apex vai sem name: a API só aceita subdomínio ali"
   }
   assert {
     condition     = cloudflare_ruleset.custom[0].rules[0].expression == "(http.host in {\"app.example.com\" \"example.com\" \"www.example.com\"} and not http.request.method in {\"GET\" \"HEAD\" \"POST\"}) or (http.host in {\"api.example.com\"} and not http.request.method in {\"GET\" \"HEAD\" \"POST\" \"PUT\" \"PATCH\" \"DELETE\" \"OPTIONS\"})"
@@ -170,6 +174,10 @@ run "pro" {
   assert {
     condition     = [for r in cloudflare_ruleset.rate_limit[0].rules : r.ref] == ["aedis_form_rate_limit", "aedis_site_rate_limit"] && cloudflare_ruleset.rate_limit[0].rules[0].ratelimit.period == 60 && cloudflare_ruleset.rate_limit[0].rules[1].expression == "http.host in {\"aedis.build\"} and not cf.client.bot"
     error_message = "o pro usa as duas regras: formulários (60 s) e limite geral sem a cdn"
+  }
+  assert {
+    condition     = alltrue([for r in cloudflare_ruleset.rate_limit[0].rules : r.action == "managed_challenge" && r.ratelimit.mitigation_timeout == 0])
+    error_message = "no pro o padrão é desafiar, com mitigation_timeout 0"
   }
   assert {
     condition     = cloudflare_bot_management.this.fight_mode == false && cloudflare_bot_management.this.sbfm_verified_bots == "allow"
@@ -370,6 +378,16 @@ run "plano_invalido" {
   }
 
   expect_failures = [var.plan]
+}
+
+run "desafio_no_free_falha" {
+  command = plan
+
+  variables {
+    rate_limit_action = "managed_challenge"
+  }
+
+  expect_failures = [cloudflare_ruleset.rate_limit]
 }
 
 run "acao_de_rate_limit_invalida" {

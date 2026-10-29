@@ -79,7 +79,7 @@ the zone: on Free every workload fits in the same rule and could not have differ
 | Minimum TLS 1.2, Always Use HTTPS, HSTS (2 years, subdomains, preload, nosniff) | yes | yes |
 | Bot Fight Mode (`bot_fight_mode`, on by default) | yes | replaced by Super Bot Fight Mode: verified bots pass, unidentified automation gets a Managed Challenge |
 | AI policy by behavior (`ai_bots`): search and agents allowed, training blocked; optional AI Labyrinth; the site's own robots.txt (not the managed one) | yes | yes |
-| Rate limiting per IP, `rate_limit_action` (Managed Challenge with `mitigation_timeout = 0` by default, or Block) | 1 rule: `POST` to the `forms` of every workload (3 per 10 s) or, with no forms, a general limit on sites and APIs (100 per 10 s, without cdn and verified bots) | 2 rules: forms (3 per minute) and the general limit |
+| Rate limiting per IP, `rate_limit_action` (Block on Free, the only action the plan accepts; Managed Challenge with `mitigation_timeout = 0` by default on Pro) | 1 rule: `POST` to the `forms` of every workload (3 per 10 s) or, with no forms, a general limit on sites and APIs (100 per 10 s, without cdn and verified bots) | 2 rules: forms (3 per minute) and the general limit |
 | Managed rulesets | the Free Managed Ruleset runs by itself | Cloudflare Managed + OWASP Core |
 | Email Routing (verified destinations, rules to a Worker or forwarded) | when asked | when asked |
 | R2 (`r2_buckets` and the cdn buckets), with the `r2.dev` dev URL turned off explicitly | when asked | when asked |
@@ -108,9 +108,10 @@ Bot Fight Mode on.
 
 ### Rate limiting
 
-The default action is Managed Challenge: people pass the challenge and the counter resets. The API requires
-`mitigation_timeout = 0` with a challenge on Free, Pro and Business; with `rate_limit_action = "block"` the action
-lasts one period (10 s on Free). `form_requests_per_period = 3` accepts three submissions per IP in the window (10 s on
+Free only accepts Block in rate limiting rules, so that is its default and the action lasts one period (10 s); asking
+for `managed_challenge` on Free fails the plan. On Pro the default is Managed Challenge: people pass the challenge and
+the counter resets. The API requires `mitigation_timeout = 0` with a challenge on Pro and Business; with
+`rate_limit_action = "block"` the action lasts one period. `form_requests_per_period = 3` accepts three submissions per IP in the window (10 s on
 Free, 1 minute on Pro).
 
 The general limit (`site_requests_per_period = 100` every 10 s, 10 req/s sustained) covers every path and method on the
