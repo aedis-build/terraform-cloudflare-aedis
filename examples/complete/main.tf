@@ -63,6 +63,7 @@ module "zone" {
       allowed_referers = ["example.com"]
       headers          = { "Timing-Allow-Origin" = "https://example.com" }
       manage_domain    = true
+      cors             = true
     }
   }
 
