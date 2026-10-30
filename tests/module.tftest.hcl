@@ -61,6 +61,10 @@ run "free_dois_sites_estaticos_e_cdn" {
     condition     = cloudflare_r2_custom_domain.cdn["cdn.aedis.build"].bucket_name == "aedis-cdn" && cloudflare_r2_custom_domain.cdn["cdn.aedis.build"].min_tls == "1.2" && cloudflare_r2_managed_domain.this["aedis-cdn"].enabled == false
     error_message = "domínio próprio do R2 com TLS 1.2 e dev URL desligado"
   }
+  assert {
+    condition     = length(cloudflare_r2_bucket_cors.cdn) == 0
+    error_message = "sem cors = true, o bucket não tem política de CORS"
+  }
   # O wildcard da Cloudflare (case-insensitive, * = zero ou mais caracteres, casa o valor inteiro) emulado em RE2 sobre
   # os padrões gerados: o domínio e os subdomínios passam, os parecidos não.
   assert {
@@ -388,6 +392,41 @@ run "desafio_no_free_falha" {
   }
 
   expect_failures = [cloudflare_ruleset.rate_limit]
+}
+
+run "cdn_com_cors" {
+  command = plan
+
+  variables {
+    zone_name = "example.com"
+    workloads = {
+      site = { type = "site-ssr", hostnames = ["example.com", "staging.example.com"] }
+      cdn  = { type = "cdn", hostnames = ["cdn.example.com"], bucket = "example-cdn", allowed_referers = ["example.com", "example.org"], cors = true }
+    }
+  }
+
+  assert {
+    condition     = cloudflare_r2_bucket_cors.cdn["example-cdn"].rules[0].allowed.origins == tolist(["https://example.com", "https://*.example.com", "https://example.org", "https://*.example.org"])
+    error_message = "as origens são o domínio e os subdomínios de cada allowed_referers"
+  }
+  assert {
+    condition     = cloudflare_r2_bucket_cors.cdn["example-cdn"].rules[0].allowed.methods == tolist(["GET", "HEAD"]) && cloudflare_r2_bucket_cors.cdn["example-cdn"].rules[0].allowed.headers == null && cloudflare_r2_bucket_cors.cdn["example-cdn"].rules[0].max_age_seconds == 86400
+    error_message = "só leitura, sem cabeçalhos extras, preflight em cache por um dia"
+  }
+}
+
+run "cors_fora_de_cdn_ou_sem_referers" {
+  command = plan
+
+  variables {
+    zone_name = "example.com"
+    workloads = {
+      site = { type = "site-ssr", hostnames = ["example.com"], cors = true }
+      cdn  = { type = "cdn", hostnames = ["cdn.example.com"], bucket = "example-cdn", cors = true }
+    }
+  }
+
+  expect_failures = [var.workloads]
 }
 
 run "acao_de_rate_limit_invalida" {

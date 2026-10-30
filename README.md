@@ -48,6 +48,7 @@ workload's `forms`.
 | `headers` | response headers | a rule in the zone's single response headers ruleset, on the workload's hostnames; on a cdn they override or add to the default security headers |
 | `rules` | WAF rules of this workload only | each expression becomes `(workload hostnames) and (expression)` in the zone's custom rules |
 | `bucket`, `allowed_referers`, `manage_domain` | cdn only: the R2 bucket, the domains whose Referer passes the hotlink rule and whether Terraform owns the R2 custom domain | a bucket with its dev URL off, an R2 custom domain per hostname (TLS 1.2) and the hotlink rule |
+| `cors` | cdn only, off by default: CORS for the `allowed_referers` | a bucket CORS policy: `GET` and `HEAD` from `https://<domain>` and `https://*.<domain>`, preflight cached for a day |
 
 What belongs to the zone stays in the zone: `plan`, `bot_fight_mode`, `ai_bots`, `email_routing`, `custom_rules` (rules
 for the whole zone), `r2_buckets`, and the rate limiting thresholds and action.
@@ -134,6 +135,7 @@ of limits.
 | Methods | `GET` and `HEAD`; anything else is blocked |
 | Hotlink | an empty Referer passes (GitHub's camo loads README images with no Referer); a Referer `https://<domain>/…` or `https://<sub>.<domain>/…` of `allowed_referers` passes; anything else is blocked |
 | Headers | `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`, `Cross-Origin-Resource-Policy: same-site`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, plus `headers` |
+| CORS | none by default (no other origin reads the objects); `cors = true` allows `GET` and `HEAD` from each domain of `allowed_referers` and its subdomains, needed for fonts, `fetch` and `crossorigin` |
 | Cache | out of the module: `Cache-Control` comes from each object's metadata at upload |
 
 The hotlink rule uses the `wildcard` operator, available on every plan (`matches`, for regexes, is Business and
@@ -175,7 +177,7 @@ account in use, short-lived and with only what the requested resources use:
 | Zone | Email Routing Rules: Edit | with `email_routing` |
 | Account | Email Routing Addresses: Edit | with `email_routing` |
 | Account | Turnstile: Edit | with a workload with `turnstile = true` |
-| Account | Workers R2 Storage: Edit | with `r2_buckets` or a cdn workload (bucket, dev URL and custom domain) |
+| Account | Workers R2 Storage: Edit | with `r2_buckets` or a cdn workload (bucket, dev URL, custom domain and CORS) |
 
 It is not the deploy pipeline's token: that one publishes Workers and never touches the WAF.
 

@@ -133,6 +133,9 @@ locals {
 
   cdn_buckets = [for w in values(var.workloads) : w.bucket if w.type == "cdn"]
   cdn_domains = merge([for w in values(var.workloads) : { for h in w.hostnames : h => w.bucket } if w.type == "cdn" && w.manage_domain]...)
+  # CORS origins per bucket, from the same domains the hotlink rule trusts: the apex and, through the R2 wildcard (which
+  # spans periods and does not match the apex), every subdomain.
+  cdn_cors = { for bucket, origins in { for w in values(var.workloads) : w.bucket => flatten([for d in w.allowed_referers : ["https://${d}", "https://*.${d}"]])... if w.type == "cdn" && w.cors } : bucket => distinct(flatten(origins)) }
 
   # Public IDs of the managed rulesets (the same in every account).
   cloudflare_managed_ruleset = "efb7b8c949ac4650a09736fc376e9aee"
@@ -316,4 +319,16 @@ resource "cloudflare_r2_custom_domain" "cdn" {
   domain      = each.key
   enabled     = true
   min_tls     = "1.2"
+}
+
+# Read-only CORS for the cdn workloads that ask for it: no credentials and no extra headers, so a page on an allowed
+# domain can load fonts and fetch objects, and no other site can read them.
+resource "cloudflare_r2_bucket_cors" "cdn" {
+  for_each    = local.cdn_cors
+  account_id  = local.account_id
+  bucket_name = cloudflare_r2_bucket.this[each.key].name
+  rules = [{
+    allowed         = { methods = ["GET", "HEAD"], origins = each.value }
+    max_age_seconds = 86400
+  }]
 }
