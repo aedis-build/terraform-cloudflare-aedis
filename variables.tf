@@ -119,6 +119,8 @@ variable "workloads" {
       rules       WAF rules of this workload only (the expression is combined with the hostnames)
       bucket, allowed_referers, manage_domain   cdn only: R2 bucket, domains whose Referer passes the hotlink rule and
                   whether Terraform owns the R2 custom domain (the provider cannot import it)
+      cors        cdn only: CORS on the bucket for GET and HEAD from https://<domain> and https://*.<domain> of each
+                  allowed_referers (fonts, fetch, crossorigin); off by default
   EOT
   type = map(object({
     type      = string
@@ -135,6 +137,7 @@ variable "workloads" {
     bucket           = optional(string)
     allowed_referers = optional(list(string), [])
     manage_domain    = optional(bool, true)
+    cors             = optional(bool, false)
   }))
   default = {}
 
@@ -161,5 +164,10 @@ variable "workloads" {
   validation {
     condition     = alltrue(flatten([for w in values(var.workloads) : [for d in w.allowed_referers : can(regex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)+$", d))]]))
     error_message = "allowed_referers are domains (e.g. aedis.build), with no scheme, path or wildcard."
+  }
+
+  validation {
+    condition     = alltrue([for w in values(var.workloads) : !w.cors || (w.type == "cdn" && length(w.allowed_referers) > 0)])
+    error_message = "cors is for cdn workloads and takes its origins from allowed_referers, which cannot be empty."
   }
 }
