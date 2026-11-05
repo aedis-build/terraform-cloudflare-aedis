@@ -13,7 +13,7 @@ permissions: {}
 jobs:
   gate:
     if: contains(fromJSON('["pull_request", "pull_request_review"]'), github.event.workflow_run.event)
-    uses: aedis-build/aedis-platform/.github/workflows/merge-gate.yml@86f5cc86348cc8de0c9cbdc65b6ce868a6f5d0cf # v2.0.0
+    uses: aedis-build/aedis-platform/.github/workflows/merge-gate.yml@2112c48dfee9a6a43d9d1337292183c3fc321583 # v4.0.0
     permissions:
       contents: read
       pull-requests: read
